@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, Plugin} from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 function watiProxyPlugin(): Plugin {
@@ -54,6 +54,7 @@ function watiProxyPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
+    base: '/Mission-Massoorie/',
     plugins: [
       react(),
       tailwindcss(),
@@ -62,7 +63,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
-          id: '/',
+          id: './',
           name: 'Mission Mussoorie 2027',
           short_name: 'Mussoorie27',
           description: 'Mission Mussoorie 2027: UPSC CSE syllabus progress tracker, spaced revisions, and study telemetry.',
@@ -70,23 +71,23 @@ export default defineConfig(() => {
           background_color: '#F7F5F0',
           display: 'standalone',
           orientation: 'portrait-primary',
-          start_url: '/',
-          scope: '/',
+          start_url: './',
+          scope: './',
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: 'pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
