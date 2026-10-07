@@ -22,8 +22,27 @@ export function useFirebaseSync(
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
-  const isRemoteUpdateRef = useRef(false);
+  const lastReceivedPayloadRef = useRef<string>('');
   const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper to extract cloud progress payload
+  const createProgressPayload = (s: AppState, uid: string) => {
+    return {
+      userId: uid,
+      updatedAt: s.d ? Object.values(s.d).sort().pop() || new Date().toISOString() : new Date().toISOString(),
+      x: s.x || {},
+      d: s.d || {},
+      r: s.r || {},
+      starred: s.starred || {},
+      notes: s.notes || {},
+      topicMinutes: s.topicMinutes || {},
+      mockScores: s.mockScores || {},
+      studySessions: s.studySessions || [],
+      targetsConfig: s.targetsConfig || {},
+      dailyTargets: s.dailyTargets || null,
+      userProfile: s.userProfile || null
+    };
+  };
 
   // 1. Listen for Auth State changes
   useEffect(() => {
@@ -50,7 +69,25 @@ export function useFirebaseSync(
 
         if (docSnap.exists()) {
           const remoteData = docSnap.data();
-          isRemoteUpdateRef.current = true;
+
+          const remotePayload = {
+            userId: currentUser.uid,
+            updatedAt: remoteData.updatedAt || '',
+            x: remoteData.x || {},
+            d: remoteData.d || {},
+            r: remoteData.r || {},
+            starred: remoteData.starred || {},
+            notes: remoteData.notes || {},
+            topicMinutes: remoteData.topicMinutes || {},
+            mockScores: remoteData.mockScores || {},
+            studySessions: remoteData.studySessions || [],
+            targetsConfig: remoteData.targetsConfig || {},
+            dailyTargets: remoteData.dailyTargets || null,
+            userProfile: remoteData.userProfile || null
+          };
+
+          const remotePayloadStr = JSON.stringify(remotePayload);
+          lastReceivedPayloadRef.current = remotePayloadStr;
 
           setState((prev) => ({
             ...prev,
@@ -68,9 +105,6 @@ export function useFirebaseSync(
           }));
 
           setLastSyncTime(new Date().toLocaleTimeString());
-          setTimeout(() => {
-            isRemoteUpdateRef.current = false;
-          }, 300);
         }
       },
       (error) => {
@@ -84,7 +118,14 @@ export function useFirebaseSync(
   // 3. Debounced Outgoing Sync to Firestore (Push local changes live to cloud)
   useEffect(() => {
     if (!isAuthReady || !currentUser || !isLoaded) return;
-    if (isRemoteUpdateRef.current) return;
+
+    const progressPayload = createProgressPayload(state, currentUser.uid);
+    const currentPayloadStr = JSON.stringify(progressPayload);
+
+    // If state matches what we just received from Firestore, skip pushing it back
+    if (currentPayloadStr === lastReceivedPayloadRef.current) {
+      return;
+    }
 
     if (syncTimerRef.current) {
       clearTimeout(syncTimerRef.current);
@@ -96,22 +137,6 @@ export function useFirebaseSync(
         const progressDocRef = doc(db, 'users', currentUser.uid, 'data', 'progress');
         const profileDocRef = doc(db, 'users', currentUser.uid);
 
-        const progressPayload = {
-          userId: currentUser.uid,
-          updatedAt: new Date().toISOString(),
-          x: state.x || {},
-          d: state.d || {},
-          r: state.r || {},
-          starred: state.starred || {},
-          notes: state.notes || {},
-          topicMinutes: state.topicMinutes || {},
-          mockScores: state.mockScores || {},
-          studySessions: state.studySessions || [],
-          targetsConfig: state.targetsConfig || {},
-          dailyTargets: state.dailyTargets || null,
-          userProfile: state.userProfile || null
-        };
-
         const profilePayload = {
           userId: currentUser.uid,
           fullName: state.userProfile?.fullName || currentUser.displayName || 'Aspirant',
@@ -121,7 +146,10 @@ export function useFirebaseSync(
           updatedAt: new Date().toISOString()
         };
 
-        // Overwrite full document (without merge: true) so unchecking/deleting keys updates Firestore cleanly
+        // Update signature before network call to prevent echoing
+        lastReceivedPayloadRef.current = currentPayloadStr;
+
+        // Overwrite full document (without merge) so deleted/unchecked keys are removed from Firestore
         await setDoc(progressDocRef, progressPayload);
         await setDoc(profileDocRef, profilePayload, { merge: true });
 
@@ -131,7 +159,7 @@ export function useFirebaseSync(
       } finally {
         setIsSyncing(false);
       }
-    }, 500);
+    }, 400);
 
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
