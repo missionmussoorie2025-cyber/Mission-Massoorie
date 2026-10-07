@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, User, LogIn, LogOut, ShieldCheck, Mail, Lock, Sparkles, 
-  Check, Globe, RefreshCw, Smartphone, Key
+  Check, Globe, RefreshCw, Smartphone, Key, ArrowLeft, Send
 } from 'lucide-react';
 import { 
   auth, 
@@ -11,6 +11,7 @@ import {
   signOut, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   FirebaseUser 
 } from '../utils/firebase';
 
@@ -27,11 +28,12 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
   currentUser,
   onLoginSuccess
 }) => {
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -43,7 +45,14 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
       onLoginSuccess?.();
       onClose();
     } catch (err: any) {
-      setAuthError(err?.message || 'Failed to sign in with Google');
+      console.error('Google Sign-In Error:', err);
+      if (err?.code === 'auth/unauthorized-domain') {
+        setAuthError('Domain authorization needed: Please add your domain (e.g. github.io) to Firebase Console > Authentication > Settings > Authorized Domains.');
+      } else if (err?.code === 'auth/popup-blocked') {
+        setAuthError('Popup was blocked by your browser. Please allow popups or use Email Sign In.');
+      } else {
+        setAuthError(err?.message || 'Failed to sign in with Google');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,29 +60,39 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setAuthError('Please enter both email and password.');
+    if (!email || (!password && authMode !== 'forgot')) {
+      setAuthError('Please enter required credentials.');
       return;
     }
     setLoading(true);
     setAuthError(null);
+    setResetSuccessMessage(null);
+
     try {
-      if (authMode === 'signin') {
+      if (authMode === 'forgot') {
+        await sendPasswordResetEmail(auth, email);
+        setResetSuccessMessage(`Password reset link sent to ${email}! Please check your inbox / spam folder.`);
+      } else if (authMode === 'signin') {
         await signInWithEmailAndPassword(auth, email, password);
+        onLoginSuccess?.();
+        onClose();
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
+        onLoginSuccess?.();
+        onClose();
       }
-      onLoginSuccess?.();
-      onClose();
     } catch (err: any) {
+      console.error('Auth Error:', err);
       if (err?.code === 'auth/user-not-found' || err?.code === 'auth/invalid-credential') {
-        setAuthError('Invalid credentials. If you are new, click "Create Account".');
+        setAuthError('Invalid email or password. If you do not have an account, click "Create Account".');
       } else if (err?.code === 'auth/email-already-in-use') {
-        setAuthError('An account with this email already exists. Try signing in.');
+        setAuthError('An account with this email already exists. Click "Sign In" instead.');
       } else if (err?.code === 'auth/weak-password') {
-        setAuthError('Password should be at least 6 characters long.');
+        setAuthError('Password must be at least 6 characters long.');
+      } else if (err?.code === 'auth/invalid-email') {
+        setAuthError('Please enter a valid email address.');
       } else {
-        setAuthError(err?.message || 'Authentication failed');
+        setAuthError(err?.message || 'Authentication operation failed.');
       }
     } finally {
       setLoading(false);
@@ -119,12 +138,18 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              {currentUser ? 'Personal Cloud Account' : 'Sign In to Your Account'}
+              {currentUser 
+                ? 'Personal Cloud Account' 
+                : authMode === 'signup' 
+                ? 'Create New Personal Account' 
+                : authMode === 'forgot'
+                ? 'Reset Your Password'
+                : 'Sign In to Your Account'}
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
               {currentUser
                 ? 'Your study logs and syllabus progress sync live across all devices.'
-                : 'Log in on any phone or laptop to automatically load all your data.'}
+                : 'Log in on any phone or laptop to automatically sync all your data.'}
             </p>
           </div>
         </div>
@@ -144,7 +169,7 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
                   {currentUser.email || `UID: ${currentUser.uid}`}
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                  <ShieldCheck className="w-3 h-3" />
+                  <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Cloud Database Active & Synced</span>
                 </div>
               </div>
@@ -152,10 +177,10 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
 
             <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
               <div className="font-bold flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-emerald-600" /> Live Cross-Device Sync Status
+                <Globe className="w-3.5 h-3.5 text-emerald-600" /> Live Cross-Device Sync Active
               </div>
               <p className="text-[11px] leading-relaxed">
-                All topic checks, revision counters, custom notes, and mock scores are saved to your personal Cloud Firestore document and updated live on every connected screen.
+                All syllabus checks, revision counters, custom notes, and mock scores are saved to your account and stream live across every phone, tablet, and PC.
               </p>
             </div>
 
@@ -168,29 +193,60 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
             </button>
           </div>
         ) : (
-          /* Sign In / Sign Up Forms */
+          /* Sign In / Sign Up / Forgot Password Forms */
           <div className="space-y-4">
-            {/* Google 1-Click Login Button */}
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full py-2.5 px-4 bg-white dark:bg-[#162131] border border-[#CBD5E1] dark:border-[#334155] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] text-xs font-bold rounded-xl flex items-center justify-center gap-3 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-              <span>Continue with Google Account</span>
-            </button>
-
-            <div className="flex items-center gap-3 my-2">
-              <div className="h-px bg-[#E2E8F0] dark:bg-[#1E293B] flex-1" />
-              <span className="text-[11px] font-bold text-[#94A3B8] uppercase">OR EMAIL LOGIN</span>
-              <div className="h-px bg-[#E2E8F0] dark:bg-[#1E293B] flex-1" />
+            {/* Mode Switcher Tabs */}
+            <div className="flex rounded-xl bg-[#F1F5F9] dark:bg-[#0B1320] p-1 border border-[#E2E8F0] dark:border-[#1E293B]">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signin'); setAuthError(null); setResetSuccessMessage(null); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  authMode === 'signin'
+                    ? 'bg-white dark:bg-[#172A46] text-[#0F172A] dark:text-white shadow-2xs'
+                    : 'text-[#64748B] hover:text-[#0F172A] dark:hover:text-white'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signup'); setAuthError(null); setResetSuccessMessage(null); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  authMode === 'signup'
+                    ? 'bg-white dark:bg-[#172A46] text-[#0F172A] dark:text-white shadow-2xs'
+                    : 'text-[#64748B] hover:text-[#0F172A] dark:hover:text-white'
+                }`}
+              >
+                Create Account
+              </button>
             </div>
 
+            {/* Google 1-Click Login Button */}
+            {authMode !== 'forgot' && (
+              <>
+                <button
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-white dark:bg-[#162131] border border-[#CBD5E1] dark:border-[#334155] hover:bg-[#F8FAFC] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-[#F8FAFC] text-xs font-bold rounded-xl flex items-center justify-center gap-3 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                  <span>Continue with Google Account</span>
+                </button>
+
+                <div className="flex items-center gap-3 my-2">
+                  <div className="h-px bg-[#E2E8F0] dark:bg-[#1E293B] flex-1" />
+                  <span className="text-[10px] font-bold text-[#94A3B8] uppercase">OR USE EMAIL & PASSWORD</span>
+                  <div className="h-px bg-[#E2E8F0] dark:bg-[#1E293B] flex-1" />
+                </div>
+              </>
+            )}
+
+            {/* Email Form */}
             <form onSubmit={handleEmailAuth} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] mb-1">
@@ -209,27 +265,47 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E2E8F0] dark:border-[#1E293B] bg-[#F8FAFC] dark:bg-[#0B1320] text-[#0F172A] dark:text-[#F8FAFC]"
-                  />
+              {authMode !== 'forgot' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">
+                      Password
+                    </label>
+                    {authMode === 'signin' && (
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMode('forgot'); setAuthError(null); setResetSuccessMessage(null); }}
+                        className="text-[11px] font-semibold text-[#2563EB] hover:underline cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E2E8F0] dark:border-[#1E293B] bg-[#F8FAFC] dark:bg-[#0B1320] text-[#0F172A] dark:text-[#F8FAFC]"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {authError && (
-                <div className="p-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300">
+                <div className="p-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 leading-relaxed">
                   {authError}
+                </div>
+              )}
+
+              {resetSuccessMessage && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{resetSuccessMessage}</span>
                 </div>
               )}
 
@@ -238,22 +314,31 @@ export const UserAuthModal: React.FC<UserAuthModalProps> = ({
                 disabled={loading}
                 className="w-full py-2.5 px-4 bg-[#172A46] hover:bg-[#1E3A5F] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                <LogIn className="w-4 h-4" />
-                <span>{loading ? 'Authenticating...' : authMode === 'signin' ? 'Sign In to Account' : 'Create New Account'}</span>
+                {authMode === 'forgot' ? (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>{loading ? 'Sending Reset Email...' : 'Send Password Reset Link'}</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4" />
+                    <span>{loading ? 'Authenticating...' : authMode === 'signin' ? 'Sign In' : 'Register & Create Account'}</span>
+                  </>
+                )}
               </button>
             </form>
 
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}
-                className="text-xs font-semibold text-[#2563EB] hover:underline cursor-pointer"
-              >
-                {authMode === 'signin'
-                  ? "Don't have an account yet? Create one"
-                  : 'Already have an account? Sign in'}
-              </button>
-            </div>
+            {authMode === 'forgot' && (
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('signin'); setAuthError(null); setResetSuccessMessage(null); }}
+                  className="text-xs font-semibold text-[#2563EB] hover:underline flex items-center justify-center gap-1 mx-auto cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to Sign In
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

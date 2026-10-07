@@ -7,7 +7,8 @@ import {
   onAuthStateChanged, 
   User as FirebaseUser,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -82,6 +83,7 @@ export {
   getDoc, 
   onSnapshot,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail
 };
 export type { FirebaseUser };
