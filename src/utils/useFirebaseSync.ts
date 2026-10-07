@@ -43,23 +43,28 @@ export function useFirebaseSync(
     const unsubscribeSnapshot = onSnapshot(
       progressDocRef,
       (docSnap) => {
+        // Skip local write echoes to prevent reverting unchecked topics
+        if (docSnap.metadata.hasPendingWrites) {
+          return;
+        }
+
         if (docSnap.exists()) {
           const remoteData = docSnap.data();
           isRemoteUpdateRef.current = true;
 
           setState((prev) => ({
             ...prev,
-            x: remoteData.x || prev.x,
-            d: remoteData.d || prev.d,
-            r: remoteData.r || prev.r,
-            starred: remoteData.starred || prev.starred,
-            notes: remoteData.notes || prev.notes,
-            topicMinutes: remoteData.topicMinutes || prev.topicMinutes,
-            mockScores: remoteData.mockScores || prev.mockScores,
-            studySessions: remoteData.studySessions || prev.studySessions,
-            targetsConfig: remoteData.targetsConfig || prev.targetsConfig,
-            dailyTargets: remoteData.dailyTargets || prev.dailyTargets,
-            userProfile: remoteData.userProfile || prev.userProfile
+            x: remoteData.x !== undefined ? remoteData.x : prev.x,
+            d: remoteData.d !== undefined ? remoteData.d : prev.d,
+            r: remoteData.r !== undefined ? remoteData.r : prev.r,
+            starred: remoteData.starred !== undefined ? remoteData.starred : prev.starred,
+            notes: remoteData.notes !== undefined ? remoteData.notes : prev.notes,
+            topicMinutes: remoteData.topicMinutes !== undefined ? remoteData.topicMinutes : prev.topicMinutes,
+            mockScores: remoteData.mockScores !== undefined ? remoteData.mockScores : prev.mockScores,
+            studySessions: remoteData.studySessions !== undefined ? remoteData.studySessions : prev.studySessions,
+            targetsConfig: remoteData.targetsConfig !== undefined ? remoteData.targetsConfig : prev.targetsConfig,
+            dailyTargets: remoteData.dailyTargets !== undefined ? remoteData.dailyTargets : prev.dailyTargets,
+            userProfile: remoteData.userProfile !== undefined ? remoteData.userProfile : prev.userProfile
           }));
 
           setLastSyncTime(new Date().toLocaleTimeString());
@@ -116,7 +121,8 @@ export function useFirebaseSync(
           updatedAt: new Date().toISOString()
         };
 
-        await setDoc(progressDocRef, progressPayload, { merge: true });
+        // Overwrite full document (without merge: true) so unchecking/deleting keys updates Firestore cleanly
+        await setDoc(progressDocRef, progressPayload);
         await setDoc(profileDocRef, profilePayload, { merge: true });
 
         setLastSyncTime(new Date().toLocaleTimeString());
@@ -125,7 +131,7 @@ export function useFirebaseSync(
       } finally {
         setIsSyncing(false);
       }
-    }, 800);
+    }, 500);
 
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
