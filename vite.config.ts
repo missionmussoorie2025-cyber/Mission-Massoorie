@@ -54,7 +54,7 @@ function watiProxyPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
-    base: '/Mission-Massoorie/',
+    base: process.env.GITHUB_ACTIONS ? '/Mission-Massoorie/' : './',
     plugins: [
       react(),
       tailwindcss(),

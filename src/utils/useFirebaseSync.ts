@@ -23,13 +23,15 @@ export function useFirebaseSync(
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   const lastReceivedPayloadRef = useRef<string>('');
+  const lastLocalEditTimeRef = useRef<number>(0);
+  const hasUnsavedLocalEditsRef = useRef<boolean>(false);
   const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper to extract cloud progress payload
   const createProgressPayload = (s: AppState, uid: string) => {
     return {
       userId: uid,
-      updatedAt: s.d ? Object.values(s.d).sort().pop() || new Date().toISOString() : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       x: s.x || {},
       d: s.d || {},
       r: s.r || {},
@@ -62,17 +64,20 @@ export function useFirebaseSync(
     const unsubscribeSnapshot = onSnapshot(
       progressDocRef,
       (docSnap) => {
-        // Skip local write echoes to prevent reverting unchecked topics
-        if (docSnap.metadata.hasPendingWrites) {
+        // Guard local user edits: do NOT overwrite UI if user made a local check/uncheck edit within 2.5s
+        if (
+          docSnap.metadata.hasPendingWrites || 
+          hasUnsavedLocalEditsRef.current || 
+          (Date.now() - lastLocalEditTimeRef.current < 2500)
+        ) {
           return;
         }
 
         if (docSnap.exists()) {
           const remoteData = docSnap.data();
 
-          const remotePayload = {
-            userId: currentUser.uid,
-            updatedAt: remoteData.updatedAt || '',
+          const remotePayload = createProgressPayload({
+            ...state,
             x: remoteData.x || {},
             d: remoteData.d || {},
             r: remoteData.r || {},
@@ -84,10 +89,9 @@ export function useFirebaseSync(
             targetsConfig: remoteData.targetsConfig || {},
             dailyTargets: remoteData.dailyTargets || null,
             userProfile: remoteData.userProfile || null
-          };
+          }, currentUser.uid);
 
-          const remotePayloadStr = JSON.stringify(remotePayload);
-          lastReceivedPayloadRef.current = remotePayloadStr;
+          lastReceivedPayloadRef.current = JSON.stringify(remotePayload);
 
           setState((prev) => ({
             ...prev,
@@ -115,7 +119,7 @@ export function useFirebaseSync(
     return () => unsubscribeSnapshot();
   }, [isAuthReady, currentUser, isLoaded]);
 
-  // 3. Debounced Outgoing Sync to Firestore (Push local changes live to cloud)
+  // 3. Outgoing Sync to Firestore (Push local changes live to cloud)
   useEffect(() => {
     if (!isAuthReady || !currentUser || !isLoaded) return;
 
@@ -126,6 +130,10 @@ export function useFirebaseSync(
     if (currentPayloadStr === lastReceivedPayloadRef.current) {
       return;
     }
+
+    // Mark that a local user edit occurred to prevent snapshot overwrites
+    hasUnsavedLocalEditsRef.current = true;
+    lastLocalEditTimeRef.current = Date.now();
 
     if (syncTimerRef.current) {
       clearTimeout(syncTimerRef.current);
@@ -146,20 +154,21 @@ export function useFirebaseSync(
           updatedAt: new Date().toISOString()
         };
 
-        // Update signature before network call to prevent echoing
+        // Update signature before network call
         lastReceivedPayloadRef.current = currentPayloadStr;
 
-        // Overwrite full document (without merge) so deleted/unchecked keys are removed from Firestore
+        // Overwrite full document so checked/unchecked states commit cleanly
         await setDoc(progressDocRef, progressPayload);
         await setDoc(profileDocRef, profilePayload, { merge: true });
 
+        hasUnsavedLocalEditsRef.current = false;
         setLastSyncTime(new Date().toLocaleTimeString());
       } catch (err) {
         console.error('Failed to push live update to Firestore', err);
       } finally {
         setIsSyncing(false);
       }
-    }, 400);
+    }, 300);
 
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
