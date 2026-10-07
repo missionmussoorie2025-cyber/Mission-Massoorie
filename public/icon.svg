@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- White Background -->
+  <rect width="512" height="512" fill="#ffffff" />
+  
+  <g transform="translate(0, 10)">
+    <!-- Pine Trees Silhouette -->
+    <g fill="#42636d">
+      <!-- Small Left Tree -->
+      <path d="M190 230 L175 250 H183 L168 270 H178 L160 295 H184 L170 320 H200 V330 H180 V320 H210 L196 295 H220 L202 270 H212 L197 250 H205 Z" />
+      
+      <!-- Center Main Tree -->
+      <path d="M256 120 L240 150 H248 L228 180 H238 L213 220 H228 L200 260 H218 L188 305 H210 L180 350 H248 V365 H264 V350 H332 L302 305 H324 L294 260 H312 L284 220 H299 L274 180 H284 L264 150 H272 Z" />
+      
+      <!-- Right Tree -->
+      <path d="M305 135 L292 160 H298 L280 185 H288 L268 215 H278 L255 250 H268 L245 285 H260 L238 320 H322 L300 285 H315 L292 250 H305 L282 215 H292 L272 185 H280 L262 160 H268 Z" />
+    </g>
+
+    <!-- Bold Main Text: MISSION -->
+    <text x="256" y="285" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="82" fill="#f29100" text-anchor="middle" letter-spacing="2">MISSION</text>
+
+    <!-- Overlay Cursive Text: MUSSOORIE -->
+    <text x="256" y="325" font-family="'Brush Script MT', 'Comic Sans MS', cursive, sans-serif" font-weight="bold" font-style="italic" font-size="64" fill="#1e252b" text-anchor="middle" letter-spacing="1">Mussoorie</text>
+
+    <!-- Year Text: 2027 -->
+    <text x="256" y="365" font-family="'Arial', sans-serif" font-weight="bold" font-size="32" fill="#42636d" text-anchor="middle" letter-spacing="4">2027</text>
+
+    <!-- Sanskrit Motto: शीलं परम भूषणम् -->
+    <text x="256" y="412" font-family="'Arial', 'Nirmala UI', sans-serif" font-weight="500" font-size="22" fill="#333333" text-anchor="middle" letter-spacing="1">शीलं परम भूषणम्</text>
+    
+    <!-- Accent Line -->
+    <line x1="180" y1="422" x2="332" y2="422" stroke="#cccccc" stroke-width="1.5" />
+  </g>
+</svg>
