@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-page: #F7F5F0;
+    --card-bg: #FFFFFF;
+    --card-border: #E6E2DA;
+    --text-primary: #17202A;
+    --text-muted: #667085;
+    --navy-primary: #172A46;
+    --gold-accent: #C8873D;
+    --green-accent: #28745A;
+    --red-accent: #B94A48;
+  }
+
+  [data-theme="dark"] {
+    --bg-page: #0E1520;
+    --card-bg: #162131;
+    --card-border: #2A3648;
+    --text-primary: #F7F5F0;
+    --text-muted: #A3ADBD;
+    --navy-primary: #8FB0F0;
+    --gold-accent: #E0A458;
+    --green-accent: #4FA582;
+    --red-accent: #D9706E;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-serif-title {
+    font-family: 'Cinzel', 'Source Serif 4', Georgia, serif;
+  }
+
+  .font-reading {
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+
+  .font-mono-num {
+    font-family: 'Source Serif 4', 'Times New Roman', Times, Georgia, serif;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-weight: 600;
+  }
+}

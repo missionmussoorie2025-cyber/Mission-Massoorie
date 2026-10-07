@@ -1,0 +1,6 @@
+{
+  "name": "Mission Mussoorie 2027",
+  "description": "Comprehensive UPSC Civil Services Exam preparation cockpit and syllabus tracker with spaced repetition revision, study velocity analytics, and workbook formula compatibility.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

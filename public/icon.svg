@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#0B1320" />
+      <stop offset="50%" stopColor="#172A46" />
+      <stop offset="100%" stopColor="#070D18" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FDE68A" />
+      <stop offset="50%" stopColor="#F59E0B" />
+      <stop offset="100%" stopColor="#B45309" />
+    </linearGradient>
+    <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#E2E8F0" />
+      <stop offset="100%" stopColor="#64748B" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="108" fill="url(#bgGrad)" />
+  
+  <!-- Outer Decorative Ring -->
+  <circle cx="256" cy="256" r="216" fill="none" stroke="url(#goldGrad)" stroke-width="4" stroke-opacity="0.4" stroke-dasharray="8 6" />
+  <circle cx="256" cy="256" r="200" fill="none" stroke="url(#goldGrad)" stroke-width="2.5" stroke-opacity="0.8" />
+
+  <!-- Mountain Peak (Mussoorie Hills) -->
+  <polygon points="256,120 370,330 142,330" fill="url(#mountainGrad)" opacity="0.25" />
+  <polygon points="256,120 330,330 256,330" fill="#CBD5E1" opacity="0.35" />
+
+  <!-- Shield Crest Body -->
+  <path d="M 256,150 L 340,195 C 340,290 295,350 256,380 C 217,350 172,290 172,195 Z" fill="#172A46" stroke="url(#goldGrad)" stroke-width="8" filter="url(#glow)" />
+  
+  <!-- Inner Shield Highlight -->
+  <path d="M 256,165 L 325,202 C 325,280 288,335 256,362 C 224,335 187,280 187,202 Z" fill="#0E1A2E" stroke="url(#goldGrad)" stroke-width="2" stroke-opacity="0.6" />
+
+  <!-- Star / Ashoka Chakra Symbol in Shield -->
+  <circle cx="256" cy="250" r="42" fill="none" stroke="url(#goldGrad)" stroke-width="4" />
+  <circle cx="256" cy="250" r="10" fill="url(#goldGrad)" />
+  <!-- 8 Rays -->
+  <g stroke="url(#goldGrad)" stroke-width="3">
+    <line x1="256" y1="212" x2="256" y2="288" />
+    <line x1="218" y1="250" x2="294" y2="250" />
+    <line x1="229" y1="223" x2="283" y2="277" />
+    <line x1="229" y1="277" x2="283" y2="223" />
+  </g>
+
+  <!-- LBSNAA Motto Ribbon Banner -->
+  <path d="M 120,405 L 256,390 L 392,405 L 372,438 L 256,424 L 140,438 Z" fill="url(#goldGrad)" stroke="#78350F" stroke-width="2" />
+  <text x="256" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="19" fill="#0F172A" letter-spacing="3">
+    LBSNAA 2027
+  </text>
+</svg>
